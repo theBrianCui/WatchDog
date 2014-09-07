@@ -27,7 +27,7 @@ namespace PRoConEvents
         private string SMTPServer = "";
         private string SMTPUsername = "";
         private string SMTPPassword = "";
-        private int SMTPPort = 465;
+        private int SMTPPort = 587;
         private string serverName = "";
         enumBoolYesNo sendEmail;
         enumBoolYesNo ssl;
@@ -44,7 +44,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "1.0.0";
+            return "1.0.1";
         }
 
         public string GetPluginAuthor()
@@ -138,23 +138,19 @@ namespace PRoConEvents
                         mySmtpClient.EnableSsl = false;
                     }
 
-                    // add from,to mailaddresses
                     MailAddress from = new MailAddress("developers@purebattlefield.org", "WatchDog on " + serverName);
-                    MailAddress to = new MailAddress(this.emailAddress, "Admins");
+                    MailAddress to = new MailAddress(this.emailAddress, "Destination");
                     MailMessage myMail = new System.Net.Mail.MailMessage(from, to);
 
-                    // set subject and encoding
                     myMail.Subject = String.Format("WatchDog Alert: Player {0} just joined {1}", offendor, this.serverName);
                     myMail.SubjectEncoding = System.Text.Encoding.UTF8;
 
-                    // set body-message and encoding
                     myMail.Body = String.Format("<p>{0} : {1}, who is a watched player, just joined {2}.</p> {3}",
                         DateTime.Now.ToString("G"),
                         offendor,
                         this.serverName,
                         "<p><i>This is an automated email sent by WatchDog for PRoCon. The watched player list can be configured in the plugin settings.</i></p>");
                     myMail.BodyEncoding = System.Text.Encoding.UTF8;
-                    // text or html
                     myMail.IsBodyHtml = true;
 
                     mySmtpClient.Send(myMail);
@@ -209,7 +205,7 @@ namespace PRoConEvents
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|SMTP Password", typeof(string), this.SMTPPassword));
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|Enable SSL?", typeof(enumBoolYesNo), this.ssl));
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|Destination Email Address", typeof(string), this.emailAddress));
-            lstReturn.Add(new CPluginVariable("Other Settings|Server Name", typeof(string), this.serverName));
+            lstReturn.Add(new CPluginVariable("Other Settings|Server Shortname", typeof(string), this.serverName));
             lstReturn.Add(new CPluginVariable("Other Settings|Debug Level", typeof(string), this.debugLevel.ToString()));
             return lstReturn;
         }
@@ -289,7 +285,7 @@ namespace PRoConEvents
                 {
                     this.emailAddress = strValue.Trim().ToLower();
                 }
-                else if (strVariable.Contains("Server Name"))
+                else if (strVariable.Contains("Server Shortname"))
                 {
                     this.serverName = strValue.Trim();
                 }
