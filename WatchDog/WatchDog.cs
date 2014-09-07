@@ -27,7 +27,10 @@ namespace PRoConEvents
         private string SMTPServer = "";
         private string SMTPUsername = "";
         private string SMTPPassword = "";
+        private int SMTPPort = 465;
+        private string serverName = "";
         enumBoolYesNo sendEmail;
+        enumBoolYesNo ssl;
 
         public WatchDog()
         {
@@ -41,7 +44,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "0.5.2";
+            return "1.0.0";
         }
 
         public string GetPluginAuthor()
@@ -123,26 +126,39 @@ namespace PRoConEvents
 
                     // set smtp-client with basicAuthentication
                     mySmtpClient.UseDefaultCredentials = false;
-                    System.Net.NetworkCredential basicAuthenticationInfo = new
-                    System.Net.NetworkCredential(this.SMTPUsername, this.SMTPPassword);
+                    System.Net.NetworkCredential basicAuthenticationInfo = new System.Net.NetworkCredential(this.SMTPUsername, this.SMTPPassword);
                     mySmtpClient.Credentials = basicAuthenticationInfo;
+                    mySmtpClient.Port = this.SMTPPort;
+                    if (this.ssl == enumBoolYesNo.Yes)
+                    {
+                        mySmtpClient.EnableSsl = true;
+                    }
+                    else
+                    {
+                        mySmtpClient.EnableSsl = false;
+                    }
 
                     // add from,to mailaddresses
-                    MailAddress from = new MailAddress("developers@purebattlefield.org", "WatchDog");
+                    MailAddress from = new MailAddress("developers@purebattlefield.org", "WatchDog on " + serverName);
                     MailAddress to = new MailAddress(this.emailAddress, "Admins");
                     MailMessage myMail = new System.Net.Mail.MailMessage(from, to);
 
                     // set subject and encoding
-                    myMail.Subject = "Test message";
+                    myMail.Subject = String.Format("WatchDog Alert: Player {0} just joined {1}", offendor, this.serverName);
                     myMail.SubjectEncoding = System.Text.Encoding.UTF8;
 
                     // set body-message and encoding
-                    myMail.Body = "<b>Test Mail</b><br>using <b>HTML</b>.";
+                    myMail.Body = String.Format("<p>{0} : {1}, who is a watched player, just joined {2}.</p> {3}",
+                        DateTime.Now.ToString("G"),
+                        offendor,
+                        this.serverName,
+                        "<p><i>This is an automated email sent by WatchDog for PRoCon. The watched player list can be configured in the plugin settings.</i></p>");
                     myMail.BodyEncoding = System.Text.Encoding.UTF8;
                     // text or html
                     myMail.IsBodyHtml = true;
 
                     mySmtpClient.Send(myMail);
+                    this.toConsole(1, "An email message was dispatched regarding " + offendor + ".");
                 }
                 catch (Exception ex)
                 {
@@ -188,9 +204,12 @@ namespace PRoConEvents
             }
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|Enable email alerts?", typeof(enumBoolYesNo), this.sendEmail));
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|SMTP Server", typeof(string), this.SMTPServer));
+            lstReturn.Add(new CPluginVariable("Email/SMTP Settings|SMTP Port", typeof(string), this.SMTPPort.ToString()));
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|SMTP Username", typeof(string), this.SMTPUsername));
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|SMTP Password", typeof(string), this.SMTPPassword));
+            lstReturn.Add(new CPluginVariable("Email/SMTP Settings|Enable SSL?", typeof(enumBoolYesNo), this.ssl));
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|Destination Email Address", typeof(string), this.emailAddress));
+            lstReturn.Add(new CPluginVariable("Other Settings|Server Name", typeof(string), this.serverName));
             lstReturn.Add(new CPluginVariable("Other Settings|Debug Level", typeof(string), this.debugLevel.ToString()));
             return lstReturn;
         }
@@ -234,9 +253,29 @@ namespace PRoConEvents
                     else
                         this.toConsole(2, "Email alerts disabled.");
                 }
+                else if (strVariable.Contains("Enable SSL?") && Enum.IsDefined(typeof(enumBoolYesNo), strValue) == true)
+                {
+                    this.ssl = (enumBoolYesNo)Enum.Parse(typeof(enumBoolYesNo), strValue);
+                    if (this.ssl == enumBoolYesNo.Yes)
+                        this.toConsole(2, "SSL enabled.");
+                    else
+                        this.toConsole(2, "SSL disabled.");
+                }
                 else if (strVariable.Contains("SMTP Server"))
                 {
                     this.SMTPServer = strValue.Trim();
+                }
+                else if (strVariable.Contains("SMTP Port"))
+                {
+                    try
+                    {
+                        this.SMTPPort = Int32.Parse(strValue.Trim());
+                    }
+                    catch (Exception z)
+                    {
+                        this.toConsole(1, "Invalid port value! Use integer values only.");
+                        this.SMTPPort = 465;
+                    }
                 }
                 else if (strVariable.Contains("SMTP Username"))
                 {
@@ -250,11 +289,15 @@ namespace PRoConEvents
                 {
                     this.emailAddress = strValue.Trim().ToLower();
                 }
+                else if (strVariable.Contains("Server Name"))
+                {
+                    this.serverName = strValue.Trim();
+                }
                 else if (strVariable.Contains("Debug Level"))
                 {
                     try
                     {
-                        this.debugLevel = Int32.Parse(strValue);
+                        this.debugLevel = Int32.Parse(strValue.Trim());
                     }
                     catch (Exception z)
                     {

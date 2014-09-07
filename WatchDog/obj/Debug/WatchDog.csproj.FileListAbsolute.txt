@@ -1,1 +1,2 @@
 C:\Users\Brian\OneDrive\Development\GitHub\WatchDog\WatchDog\obj\Debug\WatchDog.csprojResolveAssemblyReference.cache
+D:\OneDrive\Development\GitHub\WatchDog\WatchDog\obj\Debug\WatchDog.csprojResolveAssemblyReference.cache
