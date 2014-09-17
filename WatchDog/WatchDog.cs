@@ -44,7 +44,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "1.0.1";
+            return "1.0.4";
         }
 
         public string GetPluginAuthor()
@@ -59,7 +59,10 @@ namespace PRoConEvents
 
         public string GetPluginDescription()
         {
-            return @"WatchDog is a plugin for PRoCon that sends email alerts when a player on a configurable watchlist joins the server.";
+            return @"<p>WatchDog is a plugin for PRoCon that sends email alerts when a player on a configurable watchlist joins the server.</p>
+<p><b>To add players:</b> type names into the 'Add a soldier name...' field and they will automatically be alphabetically sorted into the list.
+<br><b>To remove players:</b> clear out their entries in the list.</p>
+<p>Player name matching is case insensitive. Immediately after a watched player begins joining the server, an email is dispatched to the destination address. <br>The default GMail SMTP server is <i>smtp.gmail.com</i> and port number is <i>587</i> with <i>SSL enabled.</i></p>";
         }
 
         public void toChat(String message)
@@ -206,6 +209,7 @@ namespace PRoConEvents
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|Enable SSL?", typeof(enumBoolYesNo), this.ssl));
             lstReturn.Add(new CPluginVariable("Email/SMTP Settings|Destination Email Address", typeof(string), this.emailAddress));
             lstReturn.Add(new CPluginVariable("Other Settings|Server Shortname", typeof(string), this.serverName));
+            lstReturn.Add(new CPluginVariable("Other Settings|Send a test message (type anything)", typeof(string), ""));
             lstReturn.Add(new CPluginVariable("Other Settings|Debug Level", typeof(string), this.debugLevel.ToString()));
             return lstReturn;
         }
@@ -288,6 +292,10 @@ namespace PRoConEvents
                 else if (strVariable.Contains("Server Shortname"))
                 {
                     this.serverName = strValue.Trim();
+                }
+                else if (strVariable.Contains("Send a test message (type anything)"))
+                {
+                    this.sendOutEmail("Test");
                 }
                 else if (strVariable.Contains("Debug Level"))
                 {
