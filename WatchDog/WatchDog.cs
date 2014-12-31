@@ -63,6 +63,7 @@ namespace PRoConEvents
         public string GetPluginDescription()
         {
             return @"<p>WatchDog is a plugin for PRoCon that sends email alerts when a player on a configurable watchlist joins the server.</p>
+<p><b>Watchlist file:</b> put an absolute path for a text file containing a newline-separated list of player names to watch. This feature is optional; leave the field blank when not in use.
 <p><b>To add players:</b> type names into the 'Add a soldier name...' field and they will automatically be alphabetically sorted into the list.
 <br><b>To remove players:</b> clear out their entries in the list.</p>
 <p>Player name matching is case insensitive. Immediately after a watched player begins joining the server, an email is dispatched to the destination address. <br>The default GMail SMTP server is <i>smtp.gmail.com</i> and port number is <i>587</i> with <i>SSL enabled.</i></p>";
