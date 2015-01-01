@@ -44,7 +44,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "1.0.4";
+            return "1.0.5";
         }
 
         public string GetPluginAuthor()
@@ -295,7 +295,8 @@ namespace PRoConEvents
                 }
                 else if (strVariable.Contains("Send a test message (type anything)"))
                 {
-                    this.sendOutEmail("Test");
+                    if(!String.IsNullOrEmpty(strValue.Trim()))
+                        this.sendOutEmail("Test");
                 }
                 else if (strVariable.Contains("Debug Level"))
                 {
