@@ -269,7 +269,25 @@ namespace PRoConEvents
             {
 				if (strVariable.Contains("Watchlist file"))
 				{
-					watchlistFilepath = strValue.Trim();
+                    string tempFilePath = watchlistFilepath;
+                    watchlistFilepath = strValue.Trim();
+                    try
+                    {
+                        string[] lines = System.IO.File.ReadAllLines(watchlistFilepath);
+
+                        foreach (string line in lines)
+                        {
+                            if (line.Trim().Equals(soldierName))
+                            {
+                                watchedPlayerJoined(soldierName);
+                                break;
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        this.toConsole(1, "File read error: " + e);
+                    }
 				}
 				else if (strVariable.Contains("Soldier name:"))
 				{
