@@ -141,7 +141,7 @@ namespace PRoConEvents
                         mySmtpClient.EnableSsl = false;
                     }
 
-                    MailAddress from = new MailAddress("developers@purebattlefield.org", "WatchDog on " + serverName);
+                    MailAddress from = new MailAddress("bf-development@purebattlefield.org", "WatchDog on " + serverName);
                     MailAddress to = new MailAddress(this.emailAddress, "Destination");
                     MailMessage myMail = new System.Net.Mail.MailMessage(from, to);
 
