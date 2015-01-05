@@ -47,7 +47,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "1.0.6d";
+            return "1.0.6e";
         }
 
         public string GetPluginAuthor()
@@ -131,7 +131,7 @@ namespace PRoConEvents
 
                 foreach (string line in lines)
                 {
-                    if (line.Trim().Equals(soldierName))
+                    if (line.Trim().Equals(soldierName.ToLower()))
                     {
                         watchedPlayerJoined(soldierName);
                         break;
