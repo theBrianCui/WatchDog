@@ -47,7 +47,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "1.0.6c";
+            return "1.0.6d";
         }
 
         public string GetPluginAuthor()
@@ -269,15 +269,18 @@ namespace PRoConEvents
             {
 				if (strVariable.Contains("Watchlist file"))
 				{
-                    string tempFilePath = watchlistFilepath;
+                    //string tempFilePath = watchlistFilepath;
                     watchlistFilepath = strValue.Trim();
-                    try
+                    if (watchlistFilepath.Length > 0)
                     {
-                        string[] lines = System.IO.File.ReadAllLines(watchlistFilepath);
-                    }
-                    catch (Exception e)
-                    {
-                        this.toConsole(1, "File read error: " + e);
+                        try
+                        {
+                            string[] lines = System.IO.File.ReadAllLines(watchlistFilepath);
+                        }
+                        catch (Exception e)
+                        {
+                            this.toConsole(1, "File read error: " + e);
+                        }
                     }
 				}
 				else if (strVariable.Contains("Soldier name:"))
