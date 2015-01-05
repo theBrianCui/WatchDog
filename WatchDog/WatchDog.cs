@@ -111,7 +111,8 @@ namespace PRoConEvents
             if (pluginEnabled)
             {
                 this.toConsole(3, soldierName + " just joined...");
-                if (watchlist.Contains(soldierName.ToLower()))
+                string lowerName = soldierName.ToLower();
+                if (watchlist.Contains(lowerName))
                 {
 					watchedPlayerJoined(soldierName);
                 }
@@ -128,10 +129,11 @@ namespace PRoConEvents
             try
             {
                 string[] lines = System.IO.File.ReadAllLines(watchlistFilepath);
+                string lowerName = soldierName.ToLower();
 
                 foreach (string line in lines)
                 {
-                    if (line.Trim().Equals(soldierName.ToLower()))
+                    if (line.Trim().Equals(lowerName))
                     {
                         watchedPlayerJoined(soldierName);
                         break;
