@@ -272,7 +272,7 @@ namespace PRoConEvents
 				if (strVariable.Contains("Watchlist file"))
 				{
                     //string tempFilePath = watchlistFilepath;
-                    watchlistFilepath = strValue.Trim();
+                    watchlistFilepath = strValue.Trim().Replace('\\','/');
                     if (watchlistFilepath.Length > 0)
                     {
                         try
