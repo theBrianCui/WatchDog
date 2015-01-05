@@ -49,7 +49,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "1.0.6g";
+            return "1.0.6h";
         }
 
         public string GetPluginAuthor()
@@ -124,9 +124,14 @@ namespace PRoConEvents
                     {
                         this.toConsole(3, "Watchlist file last checked " + watchlistTime.ToString("G"));
                         if (DateTime.Now.Subtract(watchlistTime).TotalMinutes > 3) //is the cache older than 3 minutes?
+                        {
+                            watchlistTime = DateTime.Now; //prevent any new threads for being created during the check
                             new Thread((ThreadStart)delegate { checkWatchlistFile(soldierName); }).Start(); //check on a separate thread
+                        }
                         else
+                        {
                             checkWatchlistCache(soldierName); //check on the same thread
+                        }
                     }
 				}
             }
@@ -134,7 +139,6 @@ namespace PRoConEvents
 
 		private void checkWatchlistFile(string soldierName)
 		{
-            watchlistTime = DateTime.Now; //prevent any new threads for being created during the check
             this.toConsole(2, "Watchlist file contents out of date, refreshing...");
             try
             {
