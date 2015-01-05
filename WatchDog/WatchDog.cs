@@ -25,6 +25,8 @@ namespace PRoConEvents
 
 		private string watchlistFilepath = "";
         private List<String> watchlist = new List<String>();
+        private DateTime watchlistTime = DateTime.Now;
+        private string[] watchlistLines = { };
         private int debugLevel = 1;
         private string emailAddress = "";
         private string SMTPServer = "";
@@ -47,7 +49,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "1.0.6e";
+            return "1.0.6g";
         }
 
         public string GetPluginAuthor()
@@ -118,33 +120,45 @@ namespace PRoConEvents
                 }
 				else
 				{
-					if(watchlistFilepath.Length > 0)
-						new Thread((ThreadStart)delegate { checkWatchlistFile(soldierName); }).Start();
+                    if (watchlistFilepath.Length > 0)
+                    {
+                        this.toConsole(3, "Watchlist file last checked " + watchlistTime.ToString("G"));
+                        if (DateTime.Now.Subtract(watchlistTime).TotalMinutes > 3) //is the cache older than 3 minutes?
+                            new Thread((ThreadStart)delegate { checkWatchlistFile(soldierName); }).Start(); //check on a separate thread
+                        else
+                            checkWatchlistCache(soldierName); //check on the same thread
+                    }
 				}
             }
         }
 
 		private void checkWatchlistFile(string soldierName)
 		{
+            watchlistTime = DateTime.Now; //prevent any new threads for being created during the check
+            this.toConsole(2, "Watchlist file contents out of date, refreshing...");
             try
             {
-                string[] lines = System.IO.File.ReadAllLines(watchlistFilepath);
-                string lowerName = soldierName.ToLower();
-
-                foreach (string line in lines)
-                {
-                    if (line.Trim().Equals(lowerName))
-                    {
-                        watchedPlayerJoined(soldierName);
-                        break;
-                    }
-                }
+                watchlistLines = System.IO.File.ReadAllLines(watchlistFilepath);
             }
             catch (Exception e)
             {
                 this.toConsole(1, "File read error: " + e);
             }
+            checkWatchlistCache(soldierName);
 		}
+
+        public void checkWatchlistCache(string soldierName)
+        {
+            string lowerName = soldierName.ToLower();
+            foreach (string line in watchlistLines)
+            {
+                if (line.Trim().Equals(lowerName))
+                {
+                    watchedPlayerJoined(soldierName);
+                    break;
+                }
+            }
+        }
 
 		private void watchedPlayerJoined(string soldierName)
 		{
@@ -277,7 +291,9 @@ namespace PRoConEvents
                     {
                         try
                         {
-                            string[] lines = System.IO.File.ReadAllLines(watchlistFilepath);
+                            watchlistLines = System.IO.File.ReadAllLines(watchlistFilepath);
+                            watchlistTime = DateTime.Now;
+                            this.toConsole(1, "File read OK! Path: " + watchlistFilepath);
                         }
                         catch (Exception e)
                         {
