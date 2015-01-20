@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Data;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Net;
 using System.Net.Mail;
 using System.Net.Mime;
@@ -21,7 +22,11 @@ namespace PRoConEvents
     public class WatchDog : PRoConPluginAPI, IPRoConPluginInterface
     {
         private bool pluginEnabled = false;
+
+		private string watchlistFilepath = "";
         private List<String> watchlist = new List<String>();
+        private DateTime watchlistTime = DateTime.Now;
+        private string[] watchlistLines = { };
         private int debugLevel = 1;
         private string emailAddress = "";
         private string SMTPServer = "";
@@ -44,7 +49,7 @@ namespace PRoConEvents
 
         public string GetPluginVersion()
         {
-            return "1.0.5";
+            return "1.0.6h";
         }
 
         public string GetPluginAuthor()
@@ -60,6 +65,7 @@ namespace PRoConEvents
         public string GetPluginDescription()
         {
             return @"<p>WatchDog is a plugin for PRoCon that sends email alerts when a player on a configurable watchlist joins the server.</p>
+<p><b>Watchlist file:</b> put an absolute path for a text file containing a newline-separated list of player names to watch. This feature is optional; leave the field blank when not in use.
 <p><b>To add players:</b> type names into the 'Add a soldier name...' field and they will automatically be alphabetically sorted into the list.
 <br><b>To remove players:</b> clear out their entries in the list.</p>
 <p>Player name matching is case insensitive. Immediately after a watched player begins joining the server, an email is dispatched to the destination address. <br>The default GMail SMTP server is <i>smtp.gmail.com</i> and port number is <i>587</i> with <i>SSL enabled.</i></p>";
@@ -106,15 +112,64 @@ namespace PRoConEvents
         {
             if (pluginEnabled)
             {
-                this.toConsole(3, "" + soldierName + " just joined...");
-                if (watchlist.Contains(soldierName.Trim().ToLower()))
+                this.toConsole(3, soldierName + " just joined...");
+                string lowerName = soldierName.ToLower();
+                if (watchlist.Contains(lowerName))
                 {
-                    this.toConsole(2, "Alert!");
-                    this.toConsole(1, String.Format("{0}, who is a watched player, just joined the server.", soldierName.Trim()));
-                    this.sendOutEmail(soldierName.Trim());
+					watchedPlayerJoined(soldierName);
+                }
+				else
+				{
+                    if (watchlistFilepath.Length > 0)
+                    {
+                        this.toConsole(3, "Watchlist file last checked " + watchlistTime.ToString("G"));
+                        if (DateTime.Now.Subtract(watchlistTime).TotalMinutes > 3) //is the cache older than 3 minutes?
+                        {
+                            watchlistTime = DateTime.Now; //prevent any new threads for being created during the check
+                            new Thread((ThreadStart)delegate { checkWatchlistFile(soldierName); }).Start(); //check on a separate thread
+                        }
+                        else
+                        {
+                            checkWatchlistCache(soldierName); //check on the same thread
+                        }
+                    }
+				}
+            }
+        }
+
+		private void checkWatchlistFile(string soldierName)
+		{
+            this.toConsole(2, "Watchlist file contents out of date, refreshing...");
+            try
+            {
+                watchlistLines = System.IO.File.ReadAllLines(watchlistFilepath);
+            }
+            catch (Exception e)
+            {
+                this.toConsole(1, "File read error: " + e);
+            }
+            checkWatchlistCache(soldierName);
+		}
+
+        public void checkWatchlistCache(string soldierName)
+        {
+            string lowerName = soldierName.ToLower();
+            foreach (string line in watchlistLines)
+            {
+                if (line.Trim().Equals(lowerName))
+                {
+                    watchedPlayerJoined(soldierName);
+                    break;
                 }
             }
         }
+
+		private void watchedPlayerJoined(string soldierName)
+		{
+			this.toConsole(2, "Alert!");
+			this.toConsole(1, String.Format("{0}, who is a watched player, just joined the server.", soldierName));
+			this.sendOutEmail(soldierName);
+		}
 
         private void sendOutEmail(string offendor)
         {
@@ -186,6 +241,9 @@ namespace PRoConEvents
         public List<CPluginVariable> GetDisplayPluginVariables()
         {
             List<CPluginVariable> lstReturn = new List<CPluginVariable>();
+
+			lstReturn.Add(new CPluginVariable("Player Watchlist|(Optional) Watchlist file", typeof(string), watchlistFilepath));
+
             lstReturn.Add(new CPluginVariable("Player Watchlist|Add a soldier name... (ci)", typeof(string), ""));
             this.watchlist.Sort();
             for (int i = 0; i < watchlist.Count; i++ )
@@ -229,87 +287,104 @@ namespace PRoConEvents
         {
             try
             {
-                if (strVariable.Contains("Soldier name:"))
-                {
-                    int n = getConfigIndex(strVariable);
-                    try
+				if (strVariable.Contains("Watchlist file"))
+				{
+                    //string tempFilePath = watchlistFilepath;
+                    watchlistFilepath = strValue.Trim().Replace('\\','/');
+                    if (watchlistFilepath.Length > 0)
                     {
-                        this.watchlist[n] = strValue.Trim().ToLower();
+                        try
+                        {
+                            watchlistLines = System.IO.File.ReadAllLines(watchlistFilepath);
+                            watchlistTime = DateTime.Now;
+                            this.toConsole(1, "File read OK! Path: " + watchlistFilepath);
+                        }
+                        catch (Exception e)
+                        {
+                            this.toConsole(1, "File read error: " + e);
+                        }
                     }
-                    catch (ArgumentOutOfRangeException e)
-                    {
-                        this.watchlist.Add(strValue.Trim().ToLower());
-                    }
-                }
-                else if (strVariable.Contains("Add a soldier name..."))
-                {
-                    this.watchlist.Add(strValue.Trim().ToLower());
-                }
-                else if (strVariable.Contains("Enable email alerts?") && Enum.IsDefined(typeof(enumBoolYesNo), strValue) == true)
-                {
-                    this.sendEmail = (enumBoolYesNo)Enum.Parse(typeof(enumBoolYesNo), strValue);
-                    if (this.sendEmail == enumBoolYesNo.Yes)
-                        this.toConsole(2, "Email alerts enabled.");
-                    else
-                        this.toConsole(2, "Email alerts disabled.");
-                }
-                else if (strVariable.Contains("Enable SSL?") && Enum.IsDefined(typeof(enumBoolYesNo), strValue) == true)
-                {
-                    this.ssl = (enumBoolYesNo)Enum.Parse(typeof(enumBoolYesNo), strValue);
-                    if (this.ssl == enumBoolYesNo.Yes)
-                        this.toConsole(2, "SSL enabled.");
-                    else
-                        this.toConsole(2, "SSL disabled.");
-                }
-                else if (strVariable.Contains("SMTP Server"))
-                {
-                    this.SMTPServer = strValue.Trim();
-                }
-                else if (strVariable.Contains("SMTP Port"))
-                {
-                    try
-                    {
-                        this.SMTPPort = Int32.Parse(strValue.Trim());
-                    }
-                    catch (Exception z)
-                    {
-                        this.toConsole(1, "Invalid port value! Use integer values only.");
-                        this.SMTPPort = 465;
-                    }
-                }
-                else if (strVariable.Contains("SMTP Username"))
-                {
-                    this.SMTPUsername = strValue.Trim();
-                }
-                else if (strVariable.Contains("SMTP Password"))
-                {
-                    this.SMTPPassword = strValue.Trim();
-                }
-                else if (strVariable.Contains("Destination Email Address"))
-                {
-                    this.emailAddress = strValue.Trim().ToLower();
-                }
-                else if (strVariable.Contains("Server Shortname"))
-                {
-                    this.serverName = strValue.Trim();
-                }
-                else if (strVariable.Contains("Send a test message (type anything)"))
-                {
-                    if(!String.IsNullOrEmpty(strValue.Trim()))
-                        this.sendOutEmail("Test");
-                }
-                else if (strVariable.Contains("Debug Level"))
-                {
-                    try
-                    {
-                        this.debugLevel = Int32.Parse(strValue.Trim());
-                    }
-                    catch (Exception z)
-                    {
-                        this.toConsole(1, "Invalid debug level! Use integer values only.");
-                        this.debugLevel = 1;
-                    }
-                }
+				}
+				else if (strVariable.Contains("Soldier name:"))
+				{
+					int n = getConfigIndex(strVariable);
+					try
+					{
+						this.watchlist[n] = strValue.Trim().ToLower();
+					}
+					catch (ArgumentOutOfRangeException e)
+					{
+						this.watchlist.Add(strValue.Trim().ToLower());
+					}
+				}
+				else if (strVariable.Contains("Add a soldier name..."))
+				{
+					this.watchlist.Add(strValue.Trim().ToLower());
+				}
+				else if (strVariable.Contains("Enable email alerts?") && Enum.IsDefined(typeof(enumBoolYesNo), strValue) == true)
+				{
+					this.sendEmail = (enumBoolYesNo)Enum.Parse(typeof(enumBoolYesNo), strValue);
+					if (this.sendEmail == enumBoolYesNo.Yes)
+						this.toConsole(2, "Email alerts enabled.");
+					else
+						this.toConsole(2, "Email alerts disabled.");
+				}
+				else if (strVariable.Contains("Enable SSL?") && Enum.IsDefined(typeof(enumBoolYesNo), strValue) == true)
+				{
+					this.ssl = (enumBoolYesNo)Enum.Parse(typeof(enumBoolYesNo), strValue);
+					if (this.ssl == enumBoolYesNo.Yes)
+						this.toConsole(2, "SSL enabled.");
+					else
+						this.toConsole(2, "SSL disabled.");
+				}
+				else if (strVariable.Contains("SMTP Server"))
+				{
+					this.SMTPServer = strValue.Trim();
+				}
+				else if (strVariable.Contains("SMTP Port"))
+				{
+					try
+					{
+						this.SMTPPort = Int32.Parse(strValue.Trim());
+					}
+					catch (Exception z)
+					{
+						this.toConsole(1, "Invalid port value! Use integer values only.");
+						this.SMTPPort = 465;
+					}
+				}
+				else if (strVariable.Contains("SMTP Username"))
+				{
+					this.SMTPUsername = strValue.Trim();
+				}
+				else if (strVariable.Contains("SMTP Password"))
+				{
+					this.SMTPPassword = strValue.Trim();
+				}
+				else if (strVariable.Contains("Destination Email Address"))
+				{
+					this.emailAddress = strValue.Trim().ToLower();
+				}
+				else if (strVariable.Contains("Server Shortname"))
+				{
+					this.serverName = strValue.Trim();
+				}
+				else if (strVariable.Contains("Send a test message (type anything)"))
+				{
+					this.sendOutEmail("Test");
+				}
+				else if (strVariable.Contains("Debug Level"))
+				{
+					try
+					{
+						this.debugLevel = Int32.Parse(strValue.Trim());
+					}
+					catch (Exception z)
+					{
+						this.toConsole(1, "Invalid debug level! Use integer values only.");
+						this.debugLevel = 1;
+					}
+				}
             }
             catch (Exception e)
             {
